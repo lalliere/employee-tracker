@@ -61,29 +61,29 @@ function homeQuestions() {
 
 function addDRE() {
     inquirer
-    .prompt({
-        name: "action",
-        type: "rawlist",
-        message: chalk.magenta("Would you like to add a department, a role, or an employee?"),
-        choices: [
-            "Add department",
-            "Add role",
-            "Add employee"
-        ]
-    })
-    .then(function (answer) {
-        switch (answer.action) {
-            case "Add department":
-                addDepartment();
-                break
-            case "Add role":
-                addRole();
-                break
-            case "Add employee":
-                addEmployee();
-                break
-        }
-    })
+        .prompt({
+            name: "action",
+            type: "rawlist",
+            message: chalk.magenta("Would you like to add a department, a role, or an employee?"),
+            choices: [
+                "Add department",
+                "Add role",
+                "Add employee"
+            ]
+        })
+        .then(function (answer) {
+            switch (answer.action) {
+                case "Add department":
+                    addDepartment();
+                    break
+                case "Add role":
+                    addRole();
+                    break
+                case "Add employee":
+                    addEmployee();
+                    break
+            }
+        })
 
 }
 
@@ -118,9 +118,9 @@ function addDepartment() {
 }
 
 function addRole() {
-    connection.query("SELECT * FROM department", function(err, results) {
+    connection.query("SELECT * FROM department", function (err, results) {
         if (err) throw err;
-    
+
         inquirer
             .prompt([
                 {
@@ -154,7 +154,7 @@ function addRole() {
                     name: "dept",
                     type: "rawlist",
                     message: chalk.magenta("Which department does this role belong in?"),
-                    choices: function() {
+                    choices: function () {
                         let deptArray = [];
                         for (let i = 0; i < results.length; i++) {
                             deptArray.push(results[i].name);
@@ -164,7 +164,7 @@ function addRole() {
 
                 }
             ])
-            .then(function(answer) {
+            .then(function (answer) {
                 let chosenDeptID;
                 for (let i = 0; i < results.length; i++) {
                     if (results[i].name === answer.dept) {
@@ -177,7 +177,7 @@ function addRole() {
                         name: answer.name,
                         salary: answer.salary,
                         department_id: chosenDeptID
-                    
+
                     },
                     function (err, res) {
                         if (err) console.log(err);
@@ -190,77 +190,39 @@ function addRole() {
 
     })
 }
-    // let deptDataString = "";
-    // let deptData = [];
 
-    // connection.query("SELECT * FROM department", function(err, res) {
-    //     if (err) throw err;
-
-    //     deptDataString = JSON.stringify(res);
-    //     deptData = res;
-       
-    //     addRoleQuestions();
-    // })
-
-    
-    // function addRoleQuestions() {
-    //     inquirer
-    //     .prompt([
-    //         {
-    //             name: "name",
-    //             type: "input",
-    //             message: chalk.magenta("What is the title of the new role?"),
-    //             validate: function validateRoleName(name) {
-    //                 if (name === '') {
-    //                     console.log(chalk.redBright("You must enter a valid role title!"));
-    //                     return false;
-    //                 }
-    //                 else {
-    //                     return true;
-    //                 }
-    //             }
-    //         },
-    //         {
-    //             name: "salary",
-    //             type: "input",
-    //             message: chalk.magenta("Enter salary: "),
-    //             validate: function (value) {
-    //                 if (isNaN(parseInt(value)) === true) {
-    //                     return new Error(chalk.redBright("Please delete your entry and enter a valid number!"));
-    //                 }
-    //                 else {
-    //                     return true;
-    //                 }
-    //             }
-    //         },
-    //         {
-    //             name: "dept",
-    //             type: "rawlist",
-    //             message: chalk.magenta("Which department does this role belong in?"),
-    //             choices: deptData
-
-    //         }
-    //     ])
-    //     .then(function (answer) {
-    //         let query = "INSERT INTO role "
-    //         // let query = "INSERT INTO role SET ?";
-    //         // connection.query(query,
-    //         //     {
-    //         //         name: answer.name,
-    //         //         salary: answer.salary,
-    //         //         department_id: answer.dept
-                
-    //         //     },
-    //         //     function (err, res) {
-    //         //         if (err) console.log(err);
-    //         //         console.log(chalk.yellow("Role added successfully!"))
-    //         //         homeQuestions();
-    //         //     })
-    //     })
-    // }
-
-
+// NEED TO ADD EMPLOYEE IN .THEN; role_id
 function addEmployee() {
+    inquirer
+    .prompt([
+      {
+        name: "first",
+        type: "input",
+        message: "What is the first name of the new employee?",
+        validate: function(value) {
+          if (value === "") {
+            return new Error("You must enter a valid name!");
+          } else {
+            return true;
+          }
+        }
+      },
+      {
+        name: "last",
+        type: "input",
+        message: "What is the last name of the new employee?",
+        validate: function(value) {
+          if (value === "") {
+            return new Error("You must enter a valid name!");
+          } else {
+            return true;
+          }
+        }
+      }
+    ])
+    .then(function(answer) {
+      console.log("COOL.");
+    });
 }
 
 function viewDRE() {
@@ -277,39 +239,147 @@ function viewDRE() {
         })
         .then(function (answer) {
             switch (answer.action) {
-                case "View department":
+                case "View departments":
                     viewDepartments();
                     break
-                case "View role":
+                case "View roles":
                     viewRoles();
                     break
-                case "View employee":
+                case "View employees":
                     viewEmployees();
                     break
             }
         })
-   
+
 }
 
 function viewDepartments() {
-    let query = "SELECT * FROM department";
+    let query = "SELECT * FROM department ORDER BY id";
     connection.query(query, function (err, res) {
-        if (err) console.log(err);
-        console.table(res)
+        if (err) throw (err);
+
+        for (let i = 0; i < res.length; i++) {
+                console.table(
+                    "ID" : res.id,
+                        Dept_Name: res.name
+                    
+      
+
+       
+                console.table(
+                    "ID " +
+                    result[i].id +
+                    " Name " +
+                    result[i].deptName
+                );
+            }
+        // for (let i = 0; i < res.length; i++) {
+        //     console.table([
+        //         {
+        //             ID: res.id,
+        //             Dept_Name: res.name
+        //         }
+        //     ])
+
+
+        // }
+            
+ 
+        //homeQuestions();
     })
 }
+
 function viewRoles() {
+  
+    let query = "SELECT * FROM role";
+    connection.query(query, function(err, res) {
+        if (err) console.log(err);
+        console.table(res);
+        homeQuestions();
+    });
 }
+
 function viewEmployees() {
+ 
+    let query = "SELECT * FROM employee";
+    connection.query(query, function(err, res) {
+        if (err) console.log(err);
+        console.table(res);
+        homeQuestions();
+    });
 }
+
 
 function updateEmployee() {
-    console.log("3")
+    let query = "SELECT role.id, role.name, role.department_id, employee.id, employee.first_name, employee.last_name, employee.role_id, employee.manager_id ";
+    query += "FROM employee INNER JOIN role ON (employee.role_id = role.id)";
+    
+    connection.query(query, function (err, results) {
+        if (err) throw err;
+     
+
+        inquirer
+            .prompt([
+                {
+                    name: "employee",
+                    type: "rawlist",
+                    message: "Which employee you would like to update?",
+                    choices: function () {
+                        let empArray = [];
+                        for (let i = 0; i < results.length; i++) {
+                            empArray.push(results[i].first_name);
+                        }
+                        return empArray;
+                    }
+                },
+                {
+                    name: "roleName",
+                    type: "rawlist",
+                    message: "What is their new role?",
+                    choices: function () {
+                        let roleArray = [];
+                        
+                        for (let i = 0; i < results.length; i++) {
+                            if(roleArray.indexOf(results[i].name) === -1) {
+                                roleArray.push(results[i].name);
+                            }
+                        }
+                        return roleArray;
+                    }
+                }
+            ])
+            .then(function (answers) {
+                let chosenRoleID;
+                for (let i = 0; i < results.length; i++) {
+                    if (results[i].name === answers.roleName) {
+                        chosenRoleID = results[i].role_id;
+                    }
+                }
+                
+                connection.query(
+                    "UPDATE employee SET ? WHERE ?",
+                    [
+                        {
+                            role_id: chosenRoleID
+                        },
+                        {
+                            first_name: answers.employee
+                        }
+                    ],
+                    function (err) {
+                        if (err) throw err;
+                        console.log(chalk.yellow("Employee role sucessfully updated!"));
+                        homeQuestions();
+                    }
+                );
+            });
+    });
+    
 }
 
 
 
-
+// BONUS
 function deleteDRE() {
     inquirer
         .prompt({
@@ -323,20 +393,27 @@ function deleteDRE() {
             ]
         })
         .then(function (answer) {
-            if (answer.action === "Department") {
-                let query = "SELECT * FROM department";
-                console.table()
-                connection.query(query, function (err, res) {
-                    if (err) console.log(err);
-                    console.table(res)
-                    deleteDepartment();
-                })
+            switch (answer.action) {
+                case "Department":
+                    connection.query("SELECT * FROM department", function (err, res) {
+                        if (err) console.log(err);
+                        console.table(res)
+                        deleteDepartment();
+                    })
+                    break
+                case "Role":
+                    deleteRole();
+                    break
+                case "Employee":
+                    deleteEmployee();
+                    break
             }
         })
-    console.log("5")
+
 }
 
 function deleteDepartment() {
+
     inquirer
         .prompt({
             name: "id",
@@ -364,26 +441,26 @@ function deleteEmployee() {
 }
 
 function viewEmpByMgr() {
-    
-    let query = "SELECT employee.manager_id";
-    query += "FROM employee INNER JOIN role ON (employee.role_id = role.name AND role.department_id";
-    query += "= role.id) WHERE (employee.role_id = ? AND role.department_id = ?) ORDER BY role.id";
 
-    connection.query(query, function(err, res) {
-        if (err) console.log(err);
-        
-        for (let i = 0; i < res.length; i++) {
-            console.table(
-                i+1 + ".) " +
-                "Manager: " +
-                res[i].manager_id +
-                " Role: " +
-                res[i].role_id +
-                " Department: " +
-                res[i].department_id
-            );
-        }
-    });
+    // let query = "SELECT employee.manager_id";
+    // query += "FROM employee INNER JOIN role ON (employee.role_id = role.name AND role.department_id";
+    // query += "= role.id) WHERE (employee.role_id = ? AND role.department_id = ?) ORDER BY role.id";
+
+    // connection.query(query, function(err, res) {
+    //     if (err) console.log(err);
+
+    //     for (let i = 0; i < res.length; i++) {
+    //         console.table(
+    //             i+1 + ".) " +
+    //             "Manager: " +
+    //             res[i].manager_id +
+    //             " Role: " +
+    //             res[i].role_id +
+    //             " Department: " +
+    //             res[i].department_id
+    //         );
+    //     }
+    // });
 }
 
 
