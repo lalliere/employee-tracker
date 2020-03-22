@@ -17,7 +17,7 @@ CREATE TABLE role (
   PRIMARY KEY (id),
   FOREIGN KEY (department_id) 
   	REFERENCES department(id)
-    ON UPDATE CASCADE ON DELETE CASCADE
+    ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
 CREATE TABLE employee (
@@ -29,11 +29,7 @@ CREATE TABLE employee (
   PRIMARY KEY (id),
   FOREIGN KEY (role_id) 
   	REFERENCES role(id)
-    ON UPDATE CASCADE ON DELETE CASCADE,
+    ON UPDATE CASCADE ON DELETE RESTRICT,
   FOREIGN KEY (manager_id) 
   	REFERENCES employee(id)
 );
-
-SELECT * FROM department;
-SELECT * FROM role;
-SELECT * FROM employee;
