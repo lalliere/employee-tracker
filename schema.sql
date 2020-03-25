@@ -5,13 +5,13 @@ USE company_db;
 
 CREATE TABLE department (
   id INT NOT NULL AUTO_INCREMENT,
-  name VARCHAR(30) NULL,
+  dept_name VARCHAR(30) NULL,
   PRIMARY KEY (id)
 );
 
 CREATE TABLE role (
   id INT NOT NULL AUTO_INCREMENT,
-  name VARCHAR(30) NULL,
+  title VARCHAR(30) NULL,
   salary DECIMAL(9,2) NULL,
   department_id INT NOT NULL,
   PRIMARY KEY (id),
@@ -21,15 +21,19 @@ CREATE TABLE role (
 );
 
 CREATE TABLE employee (
-  id INT NOT NULL AUTO_INCREMENT,
+  emp_id INT NOT NULL AUTO_INCREMENT,
   first_name VARCHAR(30) NULL,
   last_name VARCHAR(30) NULL,
   role_id INT NOT NULL,
   manager_id INT,
-  PRIMARY KEY (id),
+  PRIMARY KEY (emp_id),
   FOREIGN KEY (role_id) 
   	REFERENCES role(id)
     ON UPDATE CASCADE ON DELETE RESTRICT,
   FOREIGN KEY (manager_id) 
-  	REFERENCES employee(id)
+  	REFERENCES employee(emp_id)
 );
+
+SELECT * FROM department;
+SELECT * FROM role;
+SELECT * FROM employee;
