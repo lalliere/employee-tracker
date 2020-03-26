@@ -34,6 +34,27 @@ CREATE TABLE employee (
   	REFERENCES employee(emp_id)
 );
 
+
+INSERT INTO department (dept_name) values ('Executive');
+INSERT INTO department (dept_name) values ('Potato');
+INSERT INTO department (dept_name) values ('HR');
+INSERT INTO department (dept_name) values ('Beverage');
+
+INSERT INTO role (title, salary, department_id) values ('Boss', '250000', '1');
+INSERT INTO role (title, salary, department_id) values ('Potato Analyst', '120000', '2');
+INSERT INTO role (title, salary, department_id) values ('Office Cat', '600', '3');
+INSERT INTO role (title, salary, department_id) values ('Expert Barista', '85000', '4');
+INSERT INTO role (title, salary, department_id) values ('Tea Master', '100000', '4');
+
+INSERT INTO employee (first_name, last_name, role_id, manager_id) values ('Emily', 'Lallier', '1', NULL);
+INSERT INTO employee (first_name, last_name, role_id, manager_id) values ('Hannah', 'Yudkin', '1', NULL);
+INSERT INTO employee (first_name, last_name, role_id, manager_id) values ('Michael', 'Fearsnothing', '2', '2');
+INSERT INTO employee (first_name, last_name, role_id, manager_id) values ('Bobby', 'Hoffburger', '2', '1');
+INSERT INTO employee (first_name, last_name, role_id, manager_id) values ('Wayne', 'Whiskers', '3', NULL);
+INSERT INTO employee (first_name, last_name, role_id, manager_id) values ('Lara', 'Latte', '4', '1');
+INSERT INTO employee (first_name, last_name, role_id, manager_id) values ('Carrie', 'Chamomile', '5', '2');
+
+
 SELECT * FROM department;
 SELECT * FROM role;
 SELECT * FROM employee;
