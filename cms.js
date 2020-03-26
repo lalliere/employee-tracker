@@ -31,9 +31,10 @@ function homeQuestions() {
                 "Add a department, role, or employee",
                 "View departments, roles, or employees",
                 "Update employee roles",
-                "View list of employees by manager",
-                "Delete departments, roles, or employees",
-                "View the total utilized budget of a department"
+                "Exit"
+                //"View list of employees by manager",
+                //"Delete departments, roles, or employees",
+                //"View the total utilized budget of a department"
             ]
         })
         .then(function (answer) {
@@ -50,15 +51,17 @@ function homeQuestions() {
                 case "Update employee roles":
                     updateEmployee();
                     break
-                case "View list of employees by manager":
-                    viewEmpByMgr();
-                    break
-                case "Delete departments, roles, or employees":
-                    deleteDRE();
-                    break
-                case "View the total utilized budget of a department":
-                    viewBudget();
-                    break
+                case "Exit":
+                    process.exit();
+                // case "View list of employees by manager":
+                //     viewEmpByMgr();
+                //     break
+                // case "Delete departments, roles, or employees":
+                //     deleteDRE();
+                //     break
+                // case "View the total utilized budget of a department":
+                //     viewBudget();
+                //     break
             }
         });
 }
@@ -290,7 +293,7 @@ function addEmployee() {
                         managerID = results[i].emp_id;
                     }
                 }
-                
+
                 connection.query(
                     "INSERT INTO employee SET ? ",
                     [
@@ -381,232 +384,267 @@ function viewEmployees() {
 
 }
 
+function doQuery(query1) {
+    return new Promise(function (resolve, reject) {
+        connection.query(query1, function (err, results) {
+            if (err) reject(err);
+            resolve(results);
+        })
+    })
+}
 
-function updateEmployee() {
+async function updateEmployee() {
     let query = "SELECT employee.emp_id, employee.first_name, employee.last_name, employee.role_id, role.title, role.salary, department.dept_name ";
     query += "FROM employee JOIN role ON (employee.role_id = role.id) ";
     query += "JOIN department ON (role.department_id = department.id)";
 
-    connection.query(query, function (err, results) {
-        if (err) throw err;
+    const roles = await doQuery("SELECT * FROM role");
+    
+    const employees = await doQuery(query);
+    
+    const employeeChoices = [];
+    employees.forEach(elem => {
         
-        inquirer
-            .prompt([
-                {
-                    name: "employee",
-                    type: "rawlist",
-                    message: chalk.redBright("Which employee you would like to update?"),
-                    choices: function () {
-                        let empArray = [];
-                        for (let i = 0; i < results.length; i++) {
-                            empArray.push(results[i].first_name + " " + results[i].last_name);
-                        }
-                        return empArray;
-                    }
-                },
-                {
-                    name: "roleName",
-                    type: "rawlist",
-                    message: chalk.redBright("What is their new role?"),
-                    choices: function () {
-                        let roleArray = [];
+        let currEmp = {
+            name: `${elem.first_name} ${elem.last_name}`,
+            value: elem.emp_id,
+            short: elem.first_name
+        }
 
-                        for (let i = 0; i < results.length; i++) {
-                            // if (roleArray.indexOf(results[i].title) === -1) {
-                                roleArray.push(results[i].title);
-                            // }
-                        }
-                        return roleArray;
-                    }
-                }
-            ])
-            .then(function (answers) {
-                let chosenRoleID;
-                for (let i = 0; i < results.length; i++) {
-                    if (results[i].title === answers.roleName) {
-                        chosenRoleID = results[i].role_id;
-                    }
-                }
-
-                let chosenEmpFull = (answers.employee);
-                let chosenEmpSplit = chosenEmpFull.split(' ');
-                let chosenEmp = chosenEmpSplit[0];
-
-
-                connection.query(
-                    "UPDATE employee SET ? WHERE ?",
-                    [
-                        {
-                            role_id: chosenRoleID
-                        },
-                        {
-                            first_name: chosenEmp
-                        }
-                    ],
-                    function (err) {
-                        if (err) throw err;
-                        console.log(chalk.yellow("\nEmployee role sucessfully updated!"));
-                        homeQuestions();
-                    }
-                );
-            });
+        employeeChoices.push(currEmp);
     });
 
-}
+    const roleChoices = [];
+    roles.forEach(elem => {
+       
+        let currRole = {
+            name: elem.title,
+            value: elem.id,
+            short: elem.title
+        }
+            
+        roleChoices.push(currRole);
+    });
 
-
-
-// BONUS
-function deleteDRE() {
     inquirer
-        .prompt({
-            name: "action",
-            type: "rawlist",
-            message: chalk.blue("Do you want to delete a department, a role, or an employee?"),
-            choices: [
-                "Department",
-                "Role",
-                "Employee",
-                "Return to main menu"
-            ]
-        })
-        .then(function (answer) {
-            switch (answer.action) {
-                case "Department":
-                    deleteDepartment();
-                    break
-                case "Role":
-                    deleteRole();
-                    break
-                case "Employee":
-                    deleteEmployee();
-                    break
-                case "Return to main menu":
-                    homeQuestions();
-                    break
+        .prompt([
+            {
+                name: "employee",
+                type: "list",
+                message: chalk.redBright("Which employee you would like to update?"),
+                choices: employeeChoices
+            },
+            {
+                name: "roleName",
+                type: "list",
+                message: chalk.redBright("What is their new role?"),
+                choices: roleChoices
             }
-        })
+        ])
+        .then(function (answers) {
 
-}
-
-function deleteDepartment() {
-    let query = "SELECT * FROM department";
-
-    connection.query(query, function (err, results) {
-        if (err) throw err;
-
-        inquirer
-            .prompt({
-                name: "deptName",
-                type: "rawlist",
-                message: chalk.blueBright("Which department would you like to delete?"),
-                choices: function () {
-                    let deptArray = [];
-
-                    for (let i = 0; i < results.length; i++) {
-                        deptArray.push(results[i].dept_name);
-                    }
-                    return deptArray;
-                }
-            }).then(function (answer) {
-
-                let chosenDeptID;
-
-                for (let i = 0; i < results.length; i++) {
-                    if (results[i].dept_name === answer.deptName) {
-                        chosenDeptID = results[i].id;
-                    }
-                }
-
-                connection.query("DELETE FROM department WHERE ?",
+            connection.query(
+                "UPDATE employee SET ? WHERE ?",
+                [
                     {
-                        id: chosenDeptID
+                        role_id: answers.roleName
                     },
-                    function (error, results) {
-                        if (error) throw error;
-                        console.log(chalk.yellow('Department deleted successfully!'));
-                        homeQuestions();
-                    }
-                )
-            })
-    })
-
-}
-
-function deleteRole() {
-    let query = "SELECT * FROM role";
-
-    connection.query(query, function (err, results) {
-        if (err) throw err;
-
-        inquirer
-            .prompt({
-                name: "positionName",
-                type: "rawlist",
-                message: chalk.blueBright("Which role would you like to delete?"),
-                choices: function () {
-                    let positionArray = [];
-
-                    for (let i = 0; i < results.length; i++) {
-                        positionArray.push(results[i].title);
-                    }
-                    return positionArray;
-                }
-            }).then(function (answer) {
-
-                let chosenPositionID;
-
-                for (let i = 0; i < results.length; i++) {
-                    if (results[i].title === answer.positionName) {
-                        chosenPositionID = results[i].id;
-                    }
-                }
-
-                connection.query("DELETE FROM role WHERE ?",
                     {
-                        id: chosenPositionID
-                    },
-                    function (error, results) {
-                        if (error) throw error;
-                        console.log(chalk.yellow('Role deleted successfully!'));
-                        homeQuestions();
+                        emp_id: answers.employee
                     }
-                )
-            })
-    })
-}
+                ],
+                function (err) {
+                    if (err) throw err;
+                    console.log(chalk.yellow("\nEmployee role sucessfully updated!\n"));
+                    homeQuestions();
+                }
+            );
+        });
+    
 
-function deleteEmployee() {
-    console.log("delete employee)")
-}
-
-function viewEmpByMgr() {
-
-    // let query = "SELECT employee.manager_id";
-    // query += "FROM employee INNER JOIN role ON (employee.role_id = role.name AND role.department_id";
-    // query += "= role.id) WHERE (employee.role_id = ? AND role.department_id = ?) ORDER BY role.id";
-
-    // connection.query(query, function(err, res) {
-    //     if (err) console.log(err);
-
-    //     for (let i = 0; i < res.length; i++) {
-    //         console.table(
-    //             i+1 + ".) " +
-    //             "Manager: " +
-    //             res[i].manager_id +
-    //             " Role: " +
-    //             res[i].role_id +
-    //             " Department: " +
-    //             res[i].department_id
-    //         );
-    //     }
-    // });
 }
 
 
-function viewBudget() {
-    console.log("6")
-}
+
+// BONUS - NOT YET FINISHED
+
+//deletes have issue bc of "ON DELETE RESTRICT" from schema
+// function deleteDRE() {
+//     inquirer
+//         .prompt({
+//             name: "action",
+//             type: "rawlist",
+//             message: chalk.blue("Do you want to delete a department, a role, or an employee?"),
+//             choices: [
+//                 "Department",
+//                 "Role",
+//                 "Employee",
+//                 "Return to main menu"
+//             ]
+//         })
+//         .then(function (answer) {
+//             switch (answer.action) {
+//                 case "Department":
+//                     deleteDepartment();
+//                     break
+//                 case "Role":
+//                     deleteRole();
+//                     break
+//                 case "Employee":
+//                     deleteEmployee();
+//                     break
+//                 case "Return to main menu":
+//                     homeQuestions();
+//                     break
+//             }
+//         })
+
+// }
+
+// function deleteDepartment() {
+//     let query = "SELECT * FROM department";
+
+//     connection.query(query, function (err, results) {
+//         if (err) throw err;
+
+//         inquirer
+//             .prompt({
+//                 name: "deptName",
+//                 type: "rawlist",
+//                 message: chalk.blueBright("Which department would you like to delete?"),
+//                 choices: function () {
+//                     let deptArray = [];
+
+//                     for (let i = 0; i < results.length; i++) {
+//                         deptArray.push(results[i].dept_name);
+//                     }
+//                     return deptArray;
+//                 }
+//             }).then(function (answer) {
+
+//                 let chosenDeptID;
+
+//                 for (let i = 0; i < results.length; i++) {
+//                     if (results[i].dept_name === answer.deptName) {
+//                         chosenDeptID = results[i].id;
+//                     }
+//                 }
+
+//                 connection.query("DELETE FROM department WHERE ?",
+//                     {
+//                         id: chosenDeptID
+//                     },
+//                     function (error, results) {
+//                         if (error) throw error;
+//                         console.log(chalk.yellow('Department deleted successfully!'));
+//                         homeQuestions();
+//                     }
+//                 )
+//             })
+//     })
+
+// }
+
+// function deleteRole() {
+//     let query = "SELECT * FROM role";
+
+//     connection.query(query, function (err, results) {
+//         if (err) throw err;
+
+//         inquirer
+//             .prompt({
+//                 name: "positionName",
+//                 type: "rawlist",
+//                 message: chalk.blueBright("Which role would you like to delete?"),
+//                 choices: function () {
+//                     let positionArray = [];
+
+//                     for (let i = 0; i < results.length; i++) {
+//                         positionArray.push(results[i].title);
+//                     }
+//                     return positionArray;
+//                 }
+//             }).then(function (answer) {
+
+//                 let chosenPositionID;
+
+//                 for (let i = 0; i < results.length; i++) {
+//                     if (results[i].title === answer.positionName) {
+//                         chosenPositionID = results[i].id;
+//                     }
+//                 }
+
+//                 connection.query("DELETE FROM role WHERE ?",
+//                     {
+//                         id: chosenPositionID
+//                     },
+//                     function (error, results) {
+//                         if (error) throw error;
+//                         console.log(chalk.yellow('Role deleted successfully!'));
+//                         homeQuestions();
+//                     }
+//                 )
+//             })
+//     })
+// }
+
+// function deleteEmployee() {
+//     console.log("delete employee)")
+// }
+
+// function viewEmpByMgr() {
+//     let query = "SELECT * from employee JOIN employee ON (employee.manager_id = employee.emp_id)";
+
+
+//     connection.query(query, function(err, res) {
+//         if (err) console.log(err);
+
+//         console.log(res);
+//         // res.manager_id = res.emp_id;
+
+
+//         // if (res.manager_id === null) {
+//         //    console.log("no manager");
+//         // }
+//         // else {
+//         //     console.log(res.first_name);
+
+//         // }
+
+//         //console.log(res);
+//         // inquirer
+//         //     .prompt([
+//         //         {
+//         //             name: "mgr",
+//         //             type: "rawlist",
+//         //             message: chalk.redBright("Which manager's employee list you would like to see?"),
+//         //             choices: function () {
+//         //                 let mgrArray = [];
+//         //                 for (let i = 0; i < res.length; i++) {
+//         //                     empArray.push(res[i].first_name + " " + res[i].last_name);
+//         //                 }
+//         //                 return empArray;
+//         //             }
+//         //         },
+
+
+
+
+
+
+//         // let mgrName;
+//         // if (manager_id = emp_id) {
+//         //     let mgrName = 
+//         // console.table(res)
+//         // homeQuestions();
+
+//     });
+// }
+
+
+// function viewBudget() {
+//     console.log("view budget")
+// }
 
 
 
