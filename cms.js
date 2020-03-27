@@ -151,19 +151,19 @@ function addDepartment() {
 
 async function addRole() {
     const deptList = await doQuery("SELECT * FROM department");
-   
+
     const deptListChoices = [];
     deptList.forEach(elem => {
-       
+
         let currDept = {
             name: `${elem.dept_name}`,
             value: elem.id,
             short: elem.dept_name
         }
-            
+
         deptListChoices.push(currDept);
     });
-    
+
     inquirer
         .prompt([
             {
@@ -229,10 +229,10 @@ async function addEmployee() {
     const aRole = await doQuery("SELECT * FROM role");
 
     const aEmp = await doQuery(query);
-    
+
     const aEmpChoices = [];
     aEmp.forEach(elem => {
-        
+
         let currEmp = {
             name: `${elem.first_name} ${elem.last_name}`,
             value: elem.emp_id,
@@ -245,13 +245,13 @@ async function addEmployee() {
 
     const aRoleChoices = [];
     aRole.forEach(elem => {
-       
+
         let currRole = {
             name: `${elem.title}`,
             value: elem.id,
             short: elem.title
         }
-            
+
         aRoleChoices.push(currRole);
     });
 
@@ -391,12 +391,12 @@ async function updateEmployee() {
     query += "JOIN department ON (role.department_id = department.id)";
 
     const roles = await doQuery("SELECT * FROM role");
-    
+
     const employees = await doQuery(query);
-    
+
     const employeeChoices = [];
     employees.forEach(elem => {
-        
+
         let currEmp = {
             name: `${elem.first_name} ${elem.last_name}`,
             value: elem.emp_id,
@@ -408,13 +408,13 @@ async function updateEmployee() {
 
     const roleChoices = [];
     roles.forEach(elem => {
-       
+
         let currRole = {
             name: `${elem.title}`,
             value: elem.id,
             short: elem.title
         }
-            
+
         roleChoices.push(currRole);
     });
 
@@ -452,7 +452,7 @@ async function updateEmployee() {
                 }
             );
         });
-    
+
 
 }
 
@@ -563,7 +563,7 @@ async function deleteRole() {
                 }
             )
         })
-    
+
 }
 
 async function deleteEmployee() {
@@ -571,7 +571,7 @@ async function deleteEmployee() {
 
     const dEmpChoices = [];
     dEmp.forEach(elem => {
-        
+
         let currEmp = {
             name: `${elem.first_name} ${elem.last_name}`,
             value: elem.emp_id,
@@ -582,25 +582,25 @@ async function deleteEmployee() {
     });
 
     inquirer
-    .prompt({
-        name: "emp",
-        type: "list",
-        message: chalk.blue("Which employee would you like to delete?"),
-        choices: dEmpChoices
-    })
-    .then(function (answer) {
+        .prompt({
+            name: "emp",
+            type: "list",
+            message: chalk.blue("Which employee would you like to delete?"),
+            choices: dEmpChoices
+        })
+        .then(function (answer) {
 
-        connection.query("DELETE FROM employee WHERE ?",
-            {
-                emp_id: answer.emp
-            },
-            function (error, res) {
-                if (error) throw error;
-                console.log(chalk.yellow('\nEmployee deleted successfully!\n'));
-                homeQuestions();
-            }
-        )
-    })
-    
+            connection.query("DELETE FROM employee WHERE ?",
+                {
+                    emp_id: answer.emp
+                },
+                function (error, res) {
+                    if (error) throw error;
+                    console.log(chalk.yellow('\nEmployee deleted successfully!\n'));
+                    homeQuestions();
+                }
+            )
+        })
+
 }
 
