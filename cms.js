@@ -25,16 +25,16 @@ function homeQuestions() {
         .prompt({
             name: "action",
             type: "rawlist",
-            message: chalk.blueBright("What would you like to do?"),
+            message: chalk.blueBright("What would you like to do?\n"),
             choices: [
                 "View company directory",
                 "Add a department, role, or employee",
                 "View departments, roles, or employees",
                 "Update employee roles",
-                "Exit"
                 //"View list of employees by manager",
-                //"Delete departments, roles, or employees",
-                //"View the total utilized budget of a department"
+                "Delete a department, role, or employee",
+                //"View the total utilized budget of a department",
+                "Exit"
             ]
         })
         .then(function (answer) {
@@ -51,17 +51,17 @@ function homeQuestions() {
                 case "Update employee roles":
                     updateEmployee();
                     break
+                case "Delete a department, role, or employee":
+                    deleteDRE();
+                    break
                 case "Exit":
                     process.exit();
                 // case "View list of employees by manager":
                 //     viewEmpByMgr();
                 //     break
-                // case "Delete departments, roles, or employees":
-                //     deleteDRE();
-                //     break
-                // case "View the total utilized budget of a department":
-                //     viewBudget();
-                //     break
+                case "View the total utilized budget of a department":
+                    viewBudget();
+                    break
             }
         });
 }
@@ -76,6 +76,15 @@ function directory() {
         console.table(results);
         homeQuestions();
     });
+}
+
+function doQuery(query1) {
+    return new Promise(function (resolve, reject) {
+        connection.query(query1, function (err, results) {
+            if (err) reject(err);
+            resolve(results);
+        })
+    })
 }
 
 function addDRE() {
@@ -134,185 +143,177 @@ function addDepartment() {
                 },
                 function (err, res) {
                     if (err) console.log(err);
-                    console.log(chalk.yellow("\nDepartment added successfully!"))
+                    console.log(chalk.yellow("\nDepartment added successfully!\n"))
                     homeQuestions();
                 })
         })
 }
 
-function addRole() {
-    connection.query("SELECT * FROM department", function (err, results) {
-        if (err) throw err;
-
-        inquirer
-            .prompt([
-                {
-                    name: "name",
-                    type: "input",
-                    message: chalk.magenta("What is the title of the new role?"),
-                    validate: function validateRoleName(name) {
-                        if (name === '') {
-                            console.log(chalk.redBright("You must enter a valid role title!"));
-                            return false;
-                        }
-                        else {
-                            return true;
-                        }
+async function addRole() {
+    const deptList = await doQuery("SELECT * FROM department");
+   
+    const deptListChoices = [];
+    deptList.forEach(elem => {
+       
+        let currDept = {
+            name: `${elem.dept_name}`,
+            value: elem.id,
+            short: elem.dept_name
+        }
+            
+        deptListChoices.push(currDept);
+    });
+    
+    inquirer
+        .prompt([
+            {
+                name: "name",
+                type: "input",
+                message: chalk.magenta("What is the title of the new role?"),
+                validate: function validateRoleName(name) {
+                    if (name === '') {
+                        console.log(chalk.redBright("You must enter a valid role title!"));
+                        return false;
                     }
-                },
-                {
-                    name: "salary",
-                    type: "input",
-                    message: chalk.magenta("Enter salary: "),
-                    validate: function (value) {
-                        if (isNaN(parseInt(value)) === true) {
-                            return new Error(chalk.redBright("Please delete your entry and enter a valid number!"));
-                        }
-                        else {
-                            return true;
-                        }
-                    }
-                },
-                {
-                    name: "dept",
-                    type: "rawlist",
-                    message: chalk.magenta("Which department does this role belong in?"),
-                    choices: function () {
-                        let deptArray = [];
-                        for (let i = 0; i < results.length; i++) {
-                            deptArray.push(results[i].dept_name);
-                        }
-                        return deptArray;
-                    }
-
-                }
-            ])
-            .then(function (answer) {
-                let chosenDeptID;
-                for (let i = 0; i < results.length; i++) {
-                    if (results[i].dept_name === answer.dept) {
-                        chosenDeptID = results[i].id
+                    else {
+                        return true;
                     }
                 }
-
-                connection.query("INSERT INTO role SET ?",
-                    {
-                        title: answer.name,
-                        salary: answer.salary,
-                        department_id: chosenDeptID
-
-                    },
-                    function (err, res) {
-                        if (err) console.log(err);
-                        console.log(chalk.yellow("\nRole added successfully!"))
-                        homeQuestions();
+            },
+            {
+                name: "salary",
+                type: "input",
+                message: chalk.magenta("Enter salary: "),
+                validate: function (value) {
+                    if (isNaN(parseInt(value)) === true) {
+                        return new Error(chalk.redBright("Please delete your entry and enter a valid number!"));
                     }
-                )
+                    else {
+                        return true;
+                    }
+                }
+            },
+            {
+                name: "dept",
+                type: "list",
+                message: chalk.magenta("Which department does this role belong in?"),
+                choices: deptListChoices
+            }
+        ])
+        .then(function (answer) {
 
-            })
+            connection.query("INSERT INTO role SET ?",
+                {
+                    title: answer.name,
+                    salary: answer.salary,
+                    department_id: answer.dept
 
-    })
+                },
+                function (err, res) {
+                    if (err) console.log(err);
+                    console.log(chalk.yellow("\nRole added successfully!\n"))
+                    homeQuestions();
+                }
+            )
+
+        })
+
+
 }
 
-function addEmployee() {
+async function addEmployee() {
     let query = "SELECT employee.emp_id, employee.first_name, employee.last_name, employee.role_id, employee.manager_id, role.id, role.title, role.salary, role.department_id, department.id, department.dept_name ";
     query += "FROM employee JOIN role ON (employee.role_id = role.id)";
     query += "JOIN department ON (role.department_id = department.id)";
 
-    connection.query(query, function (err, results) {
-        if (err) throw err;
+    const aRole = await doQuery("SELECT * FROM role");
 
-        inquirer
-            .prompt([
-                {
-                    name: "first",
-                    type: "input",
-                    message: chalk.magenta("What is the first name of the new employee?"),
-                    validate: function (value) {
-                        if (value === "") {
-                            return new Error("You must enter a valid name!");
-                        } else {
-                            return true;
-                        }
-                    }
-                },
-                {
-                    name: "last",
-                    type: "input",
-                    message: chalk.magenta("What is the last name of the new employee?"),
-                    validate: function (value) {
-                        if (value === "") {
-                            return new Error("You must enter a valid name!");
-                        } else {
-                            return true;
-                        }
-                    }
-                },
-                {
-                    name: "title",
-                    type: "rawlist",
-                    message: chalk.magenta("What is their position?"),
-                    choices: function () {
-                        let roleArray = [];
+    const aEmp = await doQuery(query);
+    
+    const aEmpChoices = [];
+    aEmp.forEach(elem => {
+        
+        let currEmp = {
+            name: `${elem.first_name} ${elem.last_name}`,
+            value: elem.emp_id,
+            short: elem.first_name
+        }
 
-                        for (let i = 0; i < results.length; i++) {
-                            if (roleArray.indexOf(results[i].title) === -1) {
-                                roleArray.push(results[i].title);
-                            }
-                        }
-                        return roleArray;
-                    }
-                },
-                {
-                    name: "manager",
-                    type: "rawlist",
-                    message: chalk.magenta("Who is their manager?"),
-                    choices: function () {
-                        let managerArray = [];
-
-                        for (let i = 0; i < results.length; i++) {
-                            if (managerArray.indexOf(results[i].first_name) === -1) {
-                                managerArray.push(results[i].first_name);
-                            }
-                        }
-                        return managerArray;
-                    }
-                }
-            ])
-            .then(function (answers) {
-                let roleID;
-                for (let i = 0; i < results.length; i++) {
-                    if (results[i].title === answers.title) {
-                        roleID = results[i].role_id;
-                    }
-                }
-
-                let managerID;
-                for (let i = 0; i < results.length; i++) {
-                    if (results[i].first_name === answers.manager) {
-                        managerID = results[i].emp_id;
-                    }
-                }
-
-                connection.query(
-                    "INSERT INTO employee SET ? ",
-                    [
-                        {
-                            first_name: answers.first,
-                            last_name: answers.last,
-                            role_id: roleID,
-                            manager_id: managerID
-                        }
-                    ],
-                    function (err) {
-                        if (err) throw err;
-                        console.log(chalk.yellow("\nEmployee record sucessfully created!"));
-                        homeQuestions();
-                    }
-                );
-            });
-
+        aEmpChoices.push(currEmp);
     });
+
+
+    const aRoleChoices = [];
+    aRole.forEach(elem => {
+       
+        let currRole = {
+            name: `${elem.title}`,
+            value: elem.id,
+            short: elem.title
+        }
+            
+        aRoleChoices.push(currRole);
+    });
+
+    inquirer
+        .prompt([
+            {
+                name: "first",
+                type: "input",
+                message: chalk.magenta("What is the first name of the new employee?"),
+                validate: function (value) {
+                    if (value === "") {
+                        return new Error("You must enter a valid name!");
+                    } else {
+                        return true;
+                    }
+                }
+            },
+            {
+                name: "last",
+                type: "input",
+                message: chalk.magenta("What is the last name of the new employee?"),
+                validate: function (value) {
+                    if (value === "") {
+                        return new Error("You must enter a valid name!");
+                    } else {
+                        return true;
+                    }
+                }
+            },
+            {
+                name: "titleID",
+                type: "list",
+                message: chalk.magenta("What is their position?"),
+                choices: aRoleChoices
+            },
+            {
+                name: "manager",
+                type: "list",
+                message: chalk.magenta("Who is their manager?"),
+                choices: aEmpChoices
+            }
+        ])
+        .then(function (answers) {
+
+            connection.query(
+                "INSERT INTO employee SET ? ",
+                [
+                    {
+                        first_name: answers.first,
+                        last_name: answers.last,
+                        role_id: answers.titleID,
+                        manager_id: answers.manager
+                    }
+                ],
+                function (err) {
+                    if (err) throw err;
+                    console.log(chalk.yellow("\nEmployee record sucessfully created!\n"));
+                    homeQuestions();
+                }
+            );
+        });
+
 
 }
 
@@ -384,15 +385,6 @@ function viewEmployees() {
 
 }
 
-function doQuery(query1) {
-    return new Promise(function (resolve, reject) {
-        connection.query(query1, function (err, results) {
-            if (err) reject(err);
-            resolve(results);
-        })
-    })
-}
-
 async function updateEmployee() {
     let query = "SELECT employee.emp_id, employee.first_name, employee.last_name, employee.role_id, role.title, role.salary, department.dept_name ";
     query += "FROM employee JOIN role ON (employee.role_id = role.id) ";
@@ -418,7 +410,7 @@ async function updateEmployee() {
     roles.forEach(elem => {
        
         let currRole = {
-            name: elem.title,
+            name: `${elem.title}`,
             value: elem.id,
             short: elem.title
         }
@@ -464,194 +456,151 @@ async function updateEmployee() {
 
 }
 
+//BONUS
 
+function deleteDRE() {
+    inquirer
+        .prompt({
+            name: "action",
+            type: "rawlist",
+            message: chalk.blue("Do you want to delete a department, role, or employee?"),
+            choices: [
+                "Department",
+                "Role",
+                "Employee",
+                "Return to main menu"
+            ]
+        })
+        .then(function (answer) {
+            switch (answer.action) {
+                case "Department":
+                    deleteDepartment();
+                    break
+                case "Role":
+                    deleteRole();
+                    break
+                case "Employee":
+                    deleteEmployee();
+                    break
+                case "Return to main menu":
+                    homeQuestions();
+                    break
+            }
+        })
 
-// BONUS - NOT YET FINISHED
+}
 
-//deletes have issue bc of "ON DELETE RESTRICT" from schema
-// function deleteDRE() {
-//     inquirer
-//         .prompt({
-//             name: "action",
-//             type: "rawlist",
-//             message: chalk.blue("Do you want to delete a department, a role, or an employee?"),
-//             choices: [
-//                 "Department",
-//                 "Role",
-//                 "Employee",
-//                 "Return to main menu"
-//             ]
-//         })
-//         .then(function (answer) {
-//             switch (answer.action) {
-//                 case "Department":
-//                     deleteDepartment();
-//                     break
-//                 case "Role":
-//                     deleteRole();
-//                     break
-//                 case "Employee":
-//                     deleteEmployee();
-//                     break
-//                 case "Return to main menu":
-//                     homeQuestions();
-//                     break
-//             }
-//         })
+async function deleteDepartment() {
+    const dDept = await doQuery("SELECT * FROM department");
 
-// }
+    const dDeptChoices = [];
+    dDept.forEach(elem => {
 
-// function deleteDepartment() {
-//     let query = "SELECT * FROM department";
+        let currDept = {
+            name: `${elem.dept_name}`,
+            value: elem.id,
+            short: elem.dept_name
+        }
 
-//     connection.query(query, function (err, results) {
-//         if (err) throw err;
+        dDeptChoices.push(currDept);
+    })
 
-//         inquirer
-//             .prompt({
-//                 name: "deptName",
-//                 type: "rawlist",
-//                 message: chalk.blueBright("Which department would you like to delete?"),
-//                 choices: function () {
-//                     let deptArray = [];
+    inquirer
+        .prompt({
+            name: "deptName",
+            type: "list",
+            message: chalk.blue("Which department would you like to delete?"),
+            choices: dDeptChoices
+        })
+        .then(function (answer) {
 
-//                     for (let i = 0; i < results.length; i++) {
-//                         deptArray.push(results[i].dept_name);
-//                     }
-//                     return deptArray;
-//                 }
-//             }).then(function (answer) {
+            connection.query("DELETE FROM department WHERE ?",
+                {
+                    id: answer.deptName
+                },
+                function (error, res) {
+                    if (error) throw error;
+                    console.log(chalk.yellow('\nDepartment deleted successfully!\n'));
+                    homeQuestions();
+                }
+            )
+        })
 
-//                 let chosenDeptID;
+}
 
-//                 for (let i = 0; i < results.length; i++) {
-//                     if (results[i].dept_name === answer.deptName) {
-//                         chosenDeptID = results[i].id;
-//                     }
-//                 }
+async function deleteRole() {
+    const dRole = await doQuery("SELECT * FROM role");
 
-//                 connection.query("DELETE FROM department WHERE ?",
-//                     {
-//                         id: chosenDeptID
-//                     },
-//                     function (error, results) {
-//                         if (error) throw error;
-//                         console.log(chalk.yellow('Department deleted successfully!'));
-//                         homeQuestions();
-//                     }
-//                 )
-//             })
-//     })
+    const dRoleChoices = [];
+    dRole.forEach(elem => {
 
-// }
+        let currRole = {
+            name: `${elem.title}`,
+            value: elem.id,
+            short: elem.title
+        }
 
-// function deleteRole() {
-//     let query = "SELECT * FROM role";
+        dRoleChoices.push(currRole);
+    })
 
-//     connection.query(query, function (err, results) {
-//         if (err) throw err;
+    inquirer
+        .prompt({
+            name: "roleList",
+            type: "list",
+            message: chalk.blue("Which role would you like to delete?"),
+            choices: dRoleChoices
+        })
+        .then(function (answer) {
 
-//         inquirer
-//             .prompt({
-//                 name: "positionName",
-//                 type: "rawlist",
-//                 message: chalk.blueBright("Which role would you like to delete?"),
-//                 choices: function () {
-//                     let positionArray = [];
+            connection.query("DELETE FROM role WHERE ?",
+                {
+                    id: answer.roleList
+                },
+                function (error, res) {
+                    if (error) throw error;
+                    console.log(chalk.yellow('\nRole deleted successfully!\n'));
+                    homeQuestions();
+                }
+            )
+        })
+    
+}
 
-//                     for (let i = 0; i < results.length; i++) {
-//                         positionArray.push(results[i].title);
-//                     }
-//                     return positionArray;
-//                 }
-//             }).then(function (answer) {
+async function deleteEmployee() {
+    const dEmp = await doQuery("SELECT * FROM employee");
 
-//                 let chosenPositionID;
+    const dEmpChoices = [];
+    dEmp.forEach(elem => {
+        
+        let currEmp = {
+            name: `${elem.first_name} ${elem.last_name}`,
+            value: elem.emp_id,
+            short: elem.first_name
+        }
 
-//                 for (let i = 0; i < results.length; i++) {
-//                     if (results[i].title === answer.positionName) {
-//                         chosenPositionID = results[i].id;
-//                     }
-//                 }
+        dEmpChoices.push(currEmp);
+    });
 
-//                 connection.query("DELETE FROM role WHERE ?",
-//                     {
-//                         id: chosenPositionID
-//                     },
-//                     function (error, results) {
-//                         if (error) throw error;
-//                         console.log(chalk.yellow('Role deleted successfully!'));
-//                         homeQuestions();
-//                     }
-//                 )
-//             })
-//     })
-// }
+    inquirer
+    .prompt({
+        name: "emp",
+        type: "list",
+        message: chalk.blue("Which employee would you like to delete?"),
+        choices: dEmpChoices
+    })
+    .then(function (answer) {
 
-// function deleteEmployee() {
-//     console.log("delete employee)")
-// }
-
-// function viewEmpByMgr() {
-//     let query = "SELECT * from employee JOIN employee ON (employee.manager_id = employee.emp_id)";
-
-
-//     connection.query(query, function(err, res) {
-//         if (err) console.log(err);
-
-//         console.log(res);
-//         // res.manager_id = res.emp_id;
-
-
-//         // if (res.manager_id === null) {
-//         //    console.log("no manager");
-//         // }
-//         // else {
-//         //     console.log(res.first_name);
-
-//         // }
-
-//         //console.log(res);
-//         // inquirer
-//         //     .prompt([
-//         //         {
-//         //             name: "mgr",
-//         //             type: "rawlist",
-//         //             message: chalk.redBright("Which manager's employee list you would like to see?"),
-//         //             choices: function () {
-//         //                 let mgrArray = [];
-//         //                 for (let i = 0; i < res.length; i++) {
-//         //                     empArray.push(res[i].first_name + " " + res[i].last_name);
-//         //                 }
-//         //                 return empArray;
-//         //             }
-//         //         },
-
-
-
-
-
-
-//         // let mgrName;
-//         // if (manager_id = emp_id) {
-//         //     let mgrName = 
-//         // console.table(res)
-//         // homeQuestions();
-
-//     });
-// }
-
-
-// function viewBudget() {
-//     console.log("view budget")
-// }
-
-
-
-
-
-
-
-
-
+        connection.query("DELETE FROM employee WHERE ?",
+            {
+                emp_id: answer.emp
+            },
+            function (error, res) {
+                if (error) throw error;
+                console.log(chalk.yellow('\nEmployee deleted successfully!\n'));
+                homeQuestions();
+            }
+        )
+    })
+    
+}
 
